@@ -59,6 +59,8 @@ def _init_firebase():
     try:
         if cred_json_str:
             cred_dict = json.loads(cred_json_str)
+            if isinstance(cred_dict, dict) and 'private_key' in cred_dict:
+                cred_dict['private_key'] = cred_dict['private_key'].replace('\\n', '\n')
             cred = credentials.Certificate(cred_dict)
             print("[DB OK] Firebase initialized from FIREBASE_CREDENTIALS_JSON env var")
         elif os.path.exists(cred_path):
