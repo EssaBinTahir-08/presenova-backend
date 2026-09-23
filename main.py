@@ -10,6 +10,12 @@ Key Features:
 - Comprehensive error handling
 """
 
+try:
+    import eventlet
+    eventlet.monkey_patch()
+except Exception:
+    pass
+
 import sys
 
 # Force stdout/stderr to use UTF-8 encoding to prevent UnicodeEncodeError on Windows
@@ -102,33 +108,11 @@ def _start_pptx_purge_worker(max_age_hours: int = 24, interval_seconds: int = 36
 
 def prewarm_ml_models():
     """
-    Pre-warm ML models at startup in background thread to eliminate per-request model loading latency.
-    Loads spaCy, SentenceTransformer, sklearn PresentationScorer, and Coach Intent Classifier into RAM.
+    On cloud deployment (Render 512MB RAM tier), models are loaded lazily on demand
+    to prevent memory spikes during server startup.
     """
-    start = time.time()
-    logger.info("[PERF] Pre-warming ML models in background...")
+    logger.info("[PERF] Lazy ML model initialization active for memory efficiency.")
 
-    try:
-        from nlp_module.scoring_model import load_scoring_models
-        load_scoring_models()
-    except Exception as e:
-        logger.error(f"[PERF] Could not pre-warm scoring model: {e}", exc_info=True)
-
-    try:
-        from services.viva_rag_engine import _load_sentence_model, _load_spacy
-        _load_sentence_model()
-        _load_spacy()
-    except Exception as e:
-        logger.error(f"[PERF] Could not pre-warm SentenceTransformer/spaCy: {e}", exc_info=True)
-
-    try:
-        from services.coach_intent_engine import _get_intent_classifier
-        _get_intent_classifier()
-    except Exception as e:
-        logger.error(f"[PERF] Could not pre-warm intent classifier: {e}", exc_info=True)
-
-    elapsed = time.time() - start
-    logger.info(f"[PERF] All ML models pre-warmed successfully in {elapsed:.3f}s")
 
 
 def create_app():
